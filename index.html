@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mareias Villas — Facebook Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Montserrat:wght@700;800;900&display=swap');
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --fb:#1877F2;--fb2:#4299ff;
+  --bg:#0a0e1a;--card:#0f1423;
+  --border:rgba(24,119,242,0.18);--borderg:rgba(24,119,242,0.45);
+  --t1:#fff;--t2:#8892a4;--ta:#4299ff;
+  --green:#00e5a0;--red:#ff4d6a;--purple:#a855f7;--orange:#f97316;--gold:#f5c518;
+}
+
+/* ── BASE ─────────────────────────────────────── */
+html{background:var(--bg);min-height:100vh}
+body{
+  font-family:'Inter',sans-serif;color:var(--t1);
+  min-height:100vh;
+  padding:16px 12px 60px;
+  background:var(--bg);
+  background-image:
+    radial-gradient(ellipse 800px 500px at 50% 0%,rgba(24,119,242,0.12) 0%,transparent 70%),
+    radial-gradient(ellipse 500px 350px at 100% 25%,rgba(168,85,247,0.05) 0%,transparent 60%);
+}
+
+/* ── LOADING / ERRO ───────────────────────────── */
+#ls{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:9999;gap:16px;padding:20px;
+}
+.spin{
+  width:48px;height:48px;
+  border:3px solid rgba(24,119,242,0.2);border-top-color:var(--fb);
+  border-radius:50%;animation:spin .9s linear infinite;flex-shrink:0;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.lt{font-size:14px;color:var(--t2);font-weight:500;text-align:center}
+.err{
+  background:rgba(255,77,106,0.1);border:1px solid rgba(255,77,106,0.3);
+  border-radius:16px;padding:24px 20px;text-align:center;max-width:360px;width:100%;
+}
+.err .ei{font-size:28px;margin-bottom:8px}
+.err h3{font-size:14px;font-weight:700;color:var(--red);margin-bottom:6px}
+.err p{font-size:12px;color:var(--t2);line-height:1.7}
+.retry{
+  margin-top:14px;padding:10px 24px;
+  background:linear-gradient(135deg,var(--fb),var(--fb2));
+  border:none;border-radius:100px;color:#fff;
+  font-size:13px;font-weight:600;cursor:pointer;
+}
+
+/* ── WRAPPER ──────────────────────────────────── */
+.dash{
+  position:relative;z-index:1;
+  width:100%;max-width:1080px;
+  margin:0 auto;
+}
+
+/* ── HEADER ───────────────────────────────────── */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;
+  margin-bottom:28px;
+  padding-bottom:20px;
+  border-bottom:1px solid var(--border);
+  position:relative;
+}
+.header::after{
+  content:'';position:absolute;bottom:-1px;left:0;
+  width:160px;height:2px;
+  background:linear-gradient(90deg,var(--fb),transparent);
+}
+.hleft{display:flex;align-items:center;gap:14px}
+.bicon{
+  width:54px;height:54px;min-width:54px;
+  background:linear-gradient(135deg,var(--fb),#4299ff);
+  border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:30px;font-weight:900;color:#fff;
+  box-shadow:0 6px 24px rgba(24,119,242,.4);
+  font-family:'Montserrat',sans-serif;
+}
+.htitle{
+  font-family:'Montserrat',sans-serif;
+  font-size:clamp(17px,4vw,26px);
+  font-weight:900;letter-spacing:-0.5px;line-height:1.15;
+}
+.htitle span{color:var(--fb)}
+.hsub{
+  font-size:11px;color:var(--t2);
+  margin-top:3px;letter-spacing:1.5px;text-transform:uppercase;font-weight:500;
+}
+.hright{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.lbadge{
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(24,119,242,.12);border:1px solid var(--borderg);
+  border-radius:100px;padding:5px 12px;
+  font-size:11px;font-weight:600;color:var(--ta);
+}
+.ldot{
+  width:6px;height:6px;background:var(--fb);border-radius:50%;
+  box-shadow:0 0 6px var(--fb);animation:pulse 2s infinite;flex-shrink:0;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+.dinfo{font-size:11px;color:var(--t2)}
+
+/* ── SECTION LABEL ────────────────────────────── */
+.slbl{
+  font-size:11px;font-weight:700;
+  letter-spacing:2.5px;text-transform:uppercase;
+  color:var(--t2);margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.slbl::before{
+  content:'';width:3px;height:12px;min-width:3px;
+  background:linear-gradient(180deg,var(--fb),transparent);
+  border-radius:2px;
+}
+
+/* ── KPI GRID ─────────────────────────────────── */
+.kgrid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin-bottom:20px;
+}
+@media(max-width:600px){
+  .kgrid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:340px){
+  .kgrid{grid-template-columns:1fr}
+}
+.mc{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;
+  padding:16px 14px;
+  position:relative;overflow:hidden;
+}
+.mc::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  border-radius:16px 16px 0 0;
+}
+.mc-b::before{background:linear-gradient(90deg,var(--fb),transparent)}
+.mc-g::before{background:linear-gradient(90deg,var(--green),transparent)}
+.mc-p::before{background:linear-gradient(90deg,var(--purple),transparent)}
+.mc-o::before{background:linear-gradient(90deg,var(--orange),transparent)}
+.mc-y::before{background:linear-gradient(90deg,var(--gold),transparent)}
+.mc-r::before{background:linear-gradient(90deg,var(--red),transparent)}
+.mlbl{
+  font-size:9px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;
+  color:var(--t2);margin-bottom:7px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.mval{
+  font-family:'Montserrat',sans-serif;
+  font-size:clamp(22px,5vw,34px);
+  font-weight:900;line-height:1;letter-spacing:-1.5px;margin-bottom:4px;
+}
+.mc-b .mval{color:var(--fb)}
+.mc-g .mval{color:var(--green)}
+.mc-p .mval{color:var(--purple)}
+.mc-o .mval{color:var(--orange)}
+.mc-y .mval{color:var(--gold)}
+.mc-r .mval{color:var(--red)}
+.msub{font-size:10px;color:var(--t2);line-height:1.4}
+.mbadge{
+  display:inline-flex;align-items:center;
+  font-size:9px;font-weight:600;
+  padding:2px 8px;border-radius:100px;margin-top:6px;
+}
+.bn2{background:rgba(24,119,242,.12);color:var(--fb)}
+.bu{background:rgba(0,229,160,.12);color:var(--green)}
+
+/* ── CHART CARD ───────────────────────────────── */
+.cc{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;
+  padding:18px 16px 16px;
+  margin-bottom:14px;position:relative;overflow:hidden;
+}
+.cc::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--fb),var(--purple),transparent);
+  border-radius:16px 16px 0 0;
+}
+.ch{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  flex-wrap:wrap;gap:8px;margin-bottom:14px;
+}
+.ct{font-size:13px;font-weight:700;line-height:1.3}
+.ct small{font-size:10px;font-weight:400;color:var(--t2);display:block;margin-top:2px}
+.lgrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.lgi{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--t2);font-weight:500}
+.lgd{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── STATS ROW ────────────────────────────────── */
+.srow{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:10px;margin-bottom:14px;
+}
+@media(max-width:400px){
+  .srow{grid-template-columns:1fr 1fr}
+  .srow .sm:last-child{grid-column:span 2}
+}
+.sm{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:14px 12px;text-align:center;
+}
+.sml{
+  font-size:9px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;
+  color:var(--t2);margin-bottom:6px;
+}
+.smv{
+  font-family:'Montserrat',sans-serif;
+  font-size:clamp(20px,5vw,26px);
+  font-weight:900;line-height:1;letter-spacing:-1px;
+}
+
+/* ── BARS ─────────────────────────────────────── */
+.bc{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;padding:18px 16px;
+  margin-bottom:14px;overflow:hidden;
+}
+.bgrid{display:grid;gap:10px}
+.br2{
+  display:grid;
+  grid-template-columns:52px 1fr 54px;
+  align-items:center;gap:8px;
+}
+@media(min-width:480px){
+  .br2{grid-template-columns:80px 1fr 60px}
+}
+.brl{font-size:10px;font-weight:600;color:var(--t2);text-align:right;white-space:nowrap}
+.brbg{background:rgba(255,255,255,.06);border-radius:100px;height:7px;overflow:hidden}
+.brf{height:100%;border-radius:100px}
+.brv{font-size:11px;font-weight:700;color:var(--t1);text-align:right;white-space:nowrap}
+
+/* ── TABLE ────────────────────────────────────── */
+.tc{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;overflow:hidden;margin-bottom:36px;
+}
+.th2{
+  padding:16px 16px 14px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:8px;
+}
+.tt{font-size:13px;font-weight:700}
+.ts{font-size:10px;color:var(--t2);margin-top:2px}
+.tw{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;min-width:460px;border-collapse:collapse}
+thead th{
+  padding:10px 12px;
+  font-size:9px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;
+  color:var(--t2);text-align:left;
+  background:rgba(24,119,242,.04);
+  border-bottom:1px solid var(--border);white-space:nowrap;
+}
+tbody tr{border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(24,119,242,.06)}
+tbody td{
+  padding:9px 12px;
+  font-size:11px;font-weight:500;
+  vertical-align:middle;white-space:nowrap;
+}
+tbody td:first-child{color:var(--t2);font-size:10px}
+.mbar{
+  display:inline-block;height:3px;border-radius:2px;
+  background:linear-gradient(90deg,var(--fb),var(--fb2));
+  opacity:.55;vertical-align:middle;margin-left:4px;
+}
+
+/* ── FOOTER ───────────────────────────────────── */
+.footer{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:10px;
+  padding-top:20px;border-top:1px solid var(--border);
+}
+.fl{font-size:10px;color:var(--t2);line-height:1.8}
+.fl strong{color:var(--fb)}
+.fbadge{
+  background:rgba(24,119,242,.1);border:1px solid var(--border);
+  border-radius:8px;padding:5px 10px;
+  font-size:9px;font-weight:600;color:var(--ta);
+  letter-spacing:1px;text-transform:uppercase;white-space:nowrap;
+}
+
+/* ── TABLET/DESKTOP ───────────────────────────── */
+@media(min-width:640px){
+  body{padding:24px 20px 60px}
+  .bicon{width:62px;height:62px;min-width:62px;font-size:34px}
+  .mc{padding:20px 18px;border-radius:18px}
+  .cc{padding:22px 22px 18px;border-radius:18px;margin-bottom:16px}
+  .srow{gap:12px;margin-bottom:16px}
+  .kgrid{gap:12px;margin-bottom:22px}
+  .bc{padding:22px 20px;border-radius:18px;margin-bottom:16px}
+  .tc{border-radius:18px;margin-bottom:40px}
+  .th2{padding:18px 22px 16px}
+  thead th{padding:11px 14px}
+  tbody td{padding:10px 14px;font-size:12px}
+}
+@media(min-width:1024px){
+  body{padding:40px 20px 60px}
+  .header{margin-bottom:40px}
+}
+</style>
+</head>
+<body>
+
+<div id="ls">
+  <div class="spin"></div>
+  <div class="lt">Carregando dados — Mareias Villas Facebook...</div>
+</div>
+
+<div class="dash" id="dash" style="display:none">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="hleft">
+      <div class="bicon">f</div>
+      <div>
+        <div class="htitle">Mareias <span>Villas</span></div>
+        <div class="hsub">Facebook Fan Page &middot; Relatório Mensal</div>
+      </div>
+    </div>
+    <div class="hright">
+      <div class="lbadge"><div class="ldot"></div>Tempo Real</div>
+      <div class="dinfo">Período: <span id="dateRange">—</span></div>
+    </div>
+  </header>
+
+  <!-- KPIs -->
+  <div class="slbl">Indicadores Principais</div>
+  <div class="kgrid">
+    <div class="mc mc-b">
+      <div class="mlbl">👥 Total Seguidores</div>
+      <div class="mval" id="k1">—</div>
+      <div class="msub">Último dia registrado</div>
+      <div class="mbadge bn2">Consolidado</div>
+    </div>
+    <div class="mc mc-g">
+      <div class="mlbl">📣 Alcance Total</div>
+      <div class="mval" id="k2">—</div>
+      <div class="msub">Orgânico + Pago</div>
+      <div class="mbadge bu">↑ Acumulado</div>
+    </div>
+    <div class="mc mc-p">
+      <div class="mlbl">💰 Alcance Pago</div>
+      <div class="mval" id="k3">—</div>
+      <div class="msub">Paid Reach total</div>
+      <div class="mbadge bu">↑ Impulsionado</div>
+    </div>
+    <div class="mc mc-o">
+      <div class="mlbl">💬 Engajamento</div>
+      <div class="mval" id="k4">—</div>
+      <div class="msub">Post Engagement</div>
+      <div class="mbadge bu">↑ Interações</div>
+    </div>
+    <div class="mc mc-y">
+      <div class="mlbl">👁️ Page Views</div>
+      <div class="mval" id="k5">—</div>
+      <div class="msub">Visualizações</div>
+      <div class="mbadge bn2">Período</div>
+    </div>
+    <div class="mc mc-r">
+      <div class="mlbl">➕ Novos Seguids.</div>
+      <div class="mval" id="k6">—</div>
+      <div class="msub">New Follows</div>
+      <div class="mbadge bn2">Período</div>
+    </div>
+  </div>
+
+  <!-- GRÁFICO 1 -->
+  <div class="slbl">Evolução do Alcance</div>
+  <div class="cc">
+    <div class="ch">
+      <div class="ct">Alcance Total vs. Pago<small>Por dia — período completo</small></div>
+      <div class="lgrow">
+        <div class="lgi"><div class="lgd" style="background:#1877F2"></div>Total</div>
+        <div class="lgi"><div class="lgd" style="background:#a855f7"></div>Pago</div>
+      </div>
+    </div>
+    <canvas id="c1"></canvas>
+  </div>
+
+  <!-- GRÁFICO 2 -->
+  <div class="slbl">Engajamento & Visualizações</div>
+  <div class="cc">
+    <div class="ch">
+      <div class="ct">Post Engagement e Page Views<small>Por dia — período completo</small></div>
+      <div class="lgrow">
+        <div class="lgi"><div class="lgd" style="background:#f97316"></div>Engajamento</div>
+        <div class="lgi"><div class="lgd" style="background:#f5c518"></div>Page Views</div>
+      </div>
+    </div>
+    <canvas id="c2"></canvas>
+  </div>
+
+  <!-- STATS ROW -->
+  <div class="slbl">Métricas de Seguidores</div>
+  <div class="srow">
+    <div class="sm">
+      <div class="sml">Novos Seguid.</div>
+      <div class="smv" style="color:var(--green)" id="s1">—</div>
+    </div>
+    <div class="sm">
+      <div class="sml">Deixaram Seguir</div>
+      <div class="smv" style="color:var(--red)" id="s2">—</div>
+    </div>
+    <div class="sm">
+      <div class="sml">Novos Likes</div>
+      <div class="smv" style="color:var(--fb)" id="s3">—</div>
+    </div>
+  </div>
+
+  <!-- BARRAS -->
+  <div class="slbl">Top Dias — Maior Alcance</div>
+  <div class="bc">
+    <div class="ch"><div class="ct">Top 7 dias com maior alcance total</div></div>
+    <div class="bgrid" id="bars"></div>
+  </div>
+
+  <!-- TABELA -->
+  <div class="slbl">Histórico Diário</div>
+  <div class="tc">
+    <div class="th2">
+      <div>
+        <div class="tt">Dados por Dia</div>
+        <div class="ts">Facebook Insights · Mareias Villas · Google Sheets</div>
+      </div>
+      <div class="lbadge" style="font-size:9px"><div class="ldot"></div>Auto</div>
+    </div>
+    <div class="tw">
+      <table>
+        <thead>
+          <tr>
+            <th>Dia</th>
+            <th>Seguidores</th>
+            <th>Alcance Total</th>
+            <th>Alc. Pago</th>
+            <th>Engagement</th>
+            <th>Page Views</th>
+            <th>New Follows</th>
+            <th>Unfollows</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="fl">
+      <strong>Mareias Villas</strong> · Facebook Fan Page<br>
+      <span id="fp">—</span> · Facebook Insights por Refa Estúdio de Criação
+    </div>
+    <div class="fbadge">Dashboard Profissional da Refa</div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+//  Apps Script — Mareias Villas Facebook Fan Page
+// ══════════════════════════════════════════════════
+const API_URL = 'https://script.google.com/macros/s/AKfycbzFZDmcNqSrHL7VXN8kCfcSSGdj-VyjXLedqsRroMHk75xcFUEHLgcSPdQPN8FeAxCp/exec';
+
+// ── Parser de data robusto ────────────────────────
+// Suporta TODOS os formatos retornados pelo Apps Script:
+// "Mon May 04 2026 00:00:00 GMT-0300 (...)"
+// "2026-05-04T03:00:00.000Z"
+// "2026-05-04"
+// "04T03:00:00.000Z/05" (formato estranho antigo)
+function parseUTC(raw) {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!s || s === 'undefined' || s === 'null') return null;
+
+  // 1) ISO simples: 2026-05-04
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return { y: +iso[1], m: +iso[2], d: +iso[3] };
+
+  // 2) ISO com T: 2026-05-04T03:00:00.000Z → usa UTC direto
+  const isoT = s.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+  if (isoT) {
+    const dt = new Date(s);
+    if (!isNaN(dt)) return { y: dt.getUTCFullYear(), m: dt.getUTCMonth()+1, d: dt.getUTCDate() };
+  }
+
+  // 3) Qualquer outro formato reconhecido pelo browser
+  //    (ex: "Mon May 04 2026 00:00:00 GMT-0300 (...)")
+  const dt = new Date(s);
+  if (!isNaN(dt)) {
+    // Extrai o ano do string original para evitar erro de fuso virar dia anterior
+    const yearMatch = s.match(/(\d{4})/);
+    const y = yearMatch ? +yearMatch[1] : dt.getUTCFullYear();
+    // Usa getUTC para não deslocar por fuso
+    return { y, m: dt.getUTCMonth()+1, d: dt.getUTCDate() };
+  }
+
+  return null;
+}
+
+// Retorna "04/05" para gráficos/tabela
+function fmtShort(raw) {
+  const p = parseUTC(raw);
+  if (!p) return '—';
+  return String(p.d).padStart(2,'0') + '/' + String(p.m).padStart(2,'0');
+}
+
+// Retorna "04/05/2026" para cabeçalho
+function fmtFull(raw) {
+  const p = parseUTC(raw);
+  if (!p) return '—';
+  return String(p.d).padStart(2,'0') + '/' + String(p.m).padStart(2,'0') + '/' + p.y;
+}
+
+function fmt(n) {
+  if (n === null || n === undefined || isNaN(n)) return '0';
+  return Number(n).toLocaleString('pt-BR');
+}
+function fmtK(n) {
+  if (!n || isNaN(n)) return '0';
+  return n >= 1000 ? (n/1000).toFixed(1).replace('.',',') + ' K' : n.toLocaleString('pt-BR');
+}
+function showErr(msg, det) {
+  document.getElementById('ls').innerHTML = `
+    <div class="err">
+      <div class="ei">⚠️</div>
+      <h3>${msg}</h3>
+      <p>${det || ''}</p>
+      <button class="retry" onclick="fetchData()">Tentar novamente</button>
+    </div>`;
+}
+
+let ch1 = null, ch2 = null;
+
+function render(rows) {
+  document.getElementById('ls').style.display = 'none';
+  document.getElementById('dash').style.display = 'block';
+  if (!rows || !rows.length) { showErr('Nenhum dado encontrado.', 'Verifique a planilha.'); return; }
+
+  const last  = rows[rows.length - 1];
+  const sumR  = rows.reduce((s,r) => s + r.totalReach, 0);
+  const sumP  = rows.reduce((s,r) => s + r.paidReach, 0);
+  const sumE  = rows.reduce((s,r) => s + r.postEngagement, 0);
+  const sumV  = rows.reduce((s,r) => s + r.pageViews, 0);
+  const sumNF = rows.reduce((s,r) => s + r.newFollows, 0);
+  const sumUF = rows.reduce((s,r) => s + r.newUnfollows, 0);
+  const sumNL = rows.reduce((s,r) => s + r.newLikes, 0);
+
+  // Datas no formato correto
+  const d1 = fmtFull(rows[0].day);
+  const d2 = fmtFull(last.day);
+  document.getElementById('dateRange').textContent = d1 + ' — ' + d2;
+  document.getElementById('fp').textContent        = d1 + ' a ' + d2;
+
+  // KPIs
+  document.getElementById('k1').textContent = fmt(last.totalFollows);
+  document.getElementById('k2').textContent = fmtK(sumR);
+  document.getElementById('k3').textContent = fmtK(sumP);
+  document.getElementById('k4').textContent = fmt(sumE);
+  document.getElementById('k5').textContent = fmt(sumV);
+  document.getElementById('k6').textContent = fmt(sumNF);
+  document.getElementById('s1').textContent = fmt(sumNF);
+  document.getElementById('s2').textContent = fmt(sumUF);
+  document.getElementById('s3').textContent = fmt(sumNL);
+
+  const labels = rows.map(r => fmtShort(r.day));
+  const TOPTS  = {
+    backgroundColor:'rgba(10,14,26,.95)',
+    borderColor:'rgba(24,119,242,.3)',borderWidth:1,
+    titleColor:'#8892a4',bodyColor:'#fff',padding:10
+  };
+  const isMobile = window.innerWidth < 600;
+
+  // Gráfico 1 — Alcance
+  if (ch1) ch1.destroy();
+  ch1 = new Chart(document.getElementById('c1'), {
+    type: 'line',
+    data: { labels, datasets: [
+      { label:'Alcance Total', data: rows.map(r => r.totalReach),
+        borderColor:'#1877F2', backgroundColor:'rgba(24,119,242,.08)',
+        borderWidth:2, tension:.4, fill:true,
+        pointRadius: isMobile ? 2 : 3, pointHoverRadius:6,
+        pointBackgroundColor:'#1877F2' },
+      { label:'Alcance Pago', data: rows.map(r => r.paidReach),
+        borderColor:'#a855f7', backgroundColor:'rgba(168,85,247,.05)',
+        borderWidth:1.5, tension:.4, fill:true, borderDash:[4,3],
+        pointRadius: isMobile ? 2 : 3, pointHoverRadius:6,
+        pointBackgroundColor:'#a855f7' }
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{display:false}, tooltip:{...TOPTS,
+        callbacks:{label:c=>' '+c.dataset.label+': '+c.parsed.y.toLocaleString('pt-BR')}} },
+      scales:{
+        x:{ grid:{color:'rgba(255,255,255,.04)'},
+            ticks:{color:'#546e8a',font:{size:isMobile?9:10},maxRotation:45,maxTicksLimit:isMobile?8:15} },
+        y:{ grid:{color:'rgba(255,255,255,.04)'},
+            ticks:{color:'#546e8a',font:{size:isMobile?9:10},
+              callback:v=>v>=1000?(v/1000).toFixed(1)+'K':v} }
+      }
+    }
+  });
+
+  // Gráfico 2 — Engajamento + Page Views
+  if (ch2) ch2.destroy();
+  ch2 = new Chart(document.getElementById('c2'), {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label:'Engajamento', data: rows.map(r => r.postEngagement),
+        backgroundColor:'rgba(249,115,22,.7)', borderColor:'#f97316',
+        borderWidth:1, borderRadius:3, yAxisID:'y' },
+      { label:'Page Views', type:'line', data: rows.map(r => r.pageViews),
+        borderColor:'#f5c518', backgroundColor:'rgba(245,197,24,.08)',
+        borderWidth:1.8, tension:.4,
+        pointRadius: isMobile ? 2 : 3, pointBackgroundColor:'#f5c518', yAxisID:'y1' }
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{display:false}, tooltip:{...TOPTS} },
+      scales:{
+        x:{ grid:{color:'rgba(255,255,255,.04)'},
+            ticks:{color:'#546e8a',font:{size:isMobile?9:10},maxRotation:45,maxTicksLimit:isMobile?8:15} },
+        y:{ position:'left', grid:{color:'rgba(255,255,255,.04)'},
+            ticks:{color:'#f97316',font:{size:isMobile?9:10}} },
+        y1:{ position:'right', grid:{display:false},
+             ticks:{color:'#f5c518',font:{size:isMobile?9:10}} }
+      }
+    }
+  });
+
+  // Barras
+  const barC = ['#1877F2','#a855f7','#f97316','#00e5a0','#f5c518','#4299ff','#ff4d6a'];
+  const top  = [...rows].sort((a,b) => b.totalReach - a.totalReach).slice(0,7);
+  const mx   = top[0]?.totalReach || 1;
+  const bEl  = document.getElementById('bars');
+  bEl.innerHTML = '';
+  top.forEach((r,i) => {
+    const p = Math.round((r.totalReach / mx) * 100);
+    bEl.innerHTML += `<div class="br2">
+      <div class="brl">${fmtShort(r.day)}</div>
+      <div class="brbg"><div class="brf" style="width:${p}%;background:${barC[i]}"></div></div>
+      <div class="brv">${r.totalReach.toLocaleString('pt-BR')}</div>
+    </div>`;
+  });
+
+  // Tabela
+  const tb  = document.getElementById('tbody');
+  tb.innerHTML = '';
+  const mxR = Math.max(...rows.map(r => r.totalReach)) || 1;
+  [...rows].reverse().forEach(r => {
+    const bw = Math.round((r.totalReach / mxR) * 40);
+    tb.innerHTML += `<tr>
+      <td>${fmtShort(r.day)}</td>
+      <td>${fmt(r.totalFollows)}</td>
+      <td style="color:var(--fb);font-weight:700">${fmt(r.totalReach)}<span class="mbar" style="width:${bw}px"></span></td>
+      <td style="color:#a855f7;font-weight:600">${fmt(r.paidReach)}</td>
+      <td style="color:#f97316;font-weight:600">${fmt(r.postEngagement)}</td>
+      <td style="color:#f5c518;font-weight:600">${fmt(r.pageViews)}</td>
+      <td style="color:#00e5a0;font-weight:600">${fmt(r.newFollows)}</td>
+      <td style="color:#ff4d6a;font-weight:600">${fmt(r.newUnfollows)}</td>
+    </tr>`;
+  });
+}
+
+// ── JSONP (sem CORS) ──────────────────────────────
+function fetchData() {
+  const ls = document.getElementById('ls');
+  ls.style.display = 'flex';
+  ls.innerHTML = '<div class="spin"></div><div class="lt">Carregando dados — Mareias Villas Facebook...</div>';
+  document.getElementById('dash').style.display = 'none';
+
+  const old = document.getElementById('_jscb');
+  if (old) old.remove();
+  if (window.__fbcb) delete window.__fbcb;
+
+  const timer = setTimeout(() =>
+    showErr('Tempo esgotado.',
+      'Verifique se o Apps Script está implantado com acesso <b style="color:#fff">Qualquer pessoa</b>.'),
+    15000
+  );
+
+  window.__fbcb = function(json) {
+    clearTimeout(timer);
+    try { render(json.data || []); }
+    catch(e) { showErr('Erro ao processar dados.', e.message); }
+  };
+
+  const s = document.createElement('script');
+  s.id    = '_jscb';
+  s.src   = API_URL + '?callback=__fbcb&t=' + Date.now();
+  s.onerror = () => {
+    clearTimeout(timer);
+    showErr('Não foi possível conectar.',
+      'Verifique se o Apps Script está implantado com acesso <b style="color:#fff">Qualquer pessoa</b>.');
+  };
+  document.body.appendChild(s);
+}
+
+fetchData();
+setInterval(fetchData, 5 * 60 * 1000);
+</script>
+</body>
+</html>
